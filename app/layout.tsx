@@ -10,6 +10,9 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
     title: "Grading System - University of Moratuwa",
     description: "Parse result PDFs and manage student records",
+    icons: {
+        icon: '/favicon.ico',
+    },
 }
 
 export default function RootLayout({
