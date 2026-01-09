@@ -3,11 +3,12 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getGPAColor, getGPALabel, getPredictedClass } from "@/lib/gpa-calculator"
-import { GraduationCap, BookOpen, Award, TrendingUp } from "lucide-react"
+import { GraduationCap, BookOpen, Award, TrendingUp, Trophy } from "lucide-react"
 import { StudentAvatar } from "@/components/StudentAvatar"
 
 interface StudentHeaderProps {
     indexNumber: string
+    rank: number
     name?: string | null
     photoUrl?: string | null
     cgpa: number
@@ -16,7 +17,7 @@ interface StudentHeaderProps {
     totalPoints: number
 }
 
-export function StudentHeader({ indexNumber, name, photoUrl, cgpa, totalCredits, moduleCount, totalPoints }: StudentHeaderProps) {
+export function StudentHeader({ indexNumber, rank, name, photoUrl, cgpa, totalCredits, moduleCount, totalPoints }: StudentHeaderProps) {
     const getGPABadgeVariant = (cgpa: number) => {
         if (cgpa >= 3.7) return 'success'
         if (cgpa >= 3.0) return 'default'
@@ -67,7 +68,14 @@ export function StudentHeader({ indexNumber, name, photoUrl, cgpa, totalCredits,
                 </div>
             </CardHeader>
             <CardContent className="pt-0">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
+                    <div className="space-y-2 p-4 rounded-lg border bg-card">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                            <Trophy className="h-4 w-4" />
+                            <span className="text-xs font-medium uppercase tracking-wide">Rank</span>
+                        </div>
+                        <p className="text-2xl font-semibold tabular-nums">{rank}</p>
+                    </div>
                     <div className="space-y-2 p-4 rounded-lg border bg-card">
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <BookOpen className="h-4 w-4" />

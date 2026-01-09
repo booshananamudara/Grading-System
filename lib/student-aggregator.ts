@@ -22,6 +22,7 @@ export interface SemesterData {
 
 export interface StudentDetails {
     indexNumber: string;
+    rank: number;
     name: string | null;
     photoUrl: string | null;
     cgpa: number;
@@ -222,8 +223,13 @@ export function getStudentDetails(indexNumber: string, batch?: string, degree?: 
     const totalCredits = modules.reduce((sum: number, m: ModuleGrade) => sum + m.credits, 0);
     const profile = getStudentProfile(indexNumber, batch, degree);
 
+    // Calculate rank by comparing with all students
+    const allStudents = getAllStudents(batch, degree);
+    const rank = allStudents.findIndex(s => s.indexNumber === indexNumber) + 1;
+
     return {
         indexNumber,
+        rank,
         name: profile?.name || null,
         photoUrl: profile?.photoUrl || null,
         cgpa,

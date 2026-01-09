@@ -22,6 +22,7 @@ interface SemesterData {
 
 interface StudentDetails {
     indexNumber: string
+    rank: number
     name: string | null
     photoUrl: string | null
     cgpa: number
@@ -151,6 +152,7 @@ export default function StudentDetailPage({
                 <div className="mb-8">
                     <StudentHeader
                         indexNumber={student.indexNumber}
+                        rank={student.rank}
                         name={student.name}
                         photoUrl={student.photoUrl}
                         cgpa={student.cgpa}

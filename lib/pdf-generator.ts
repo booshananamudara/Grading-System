@@ -20,6 +20,7 @@ interface SemesterData {
 
 interface StudentDetails {
     indexNumber: string
+    rank: number
     name: string | null
     photoUrl: string | null
     cgpa: number
@@ -31,76 +32,192 @@ interface StudentDetails {
 export function generateStudentPDF(student: StudentDetails) {
     const doc = new jsPDF()
 
-    // Set up colors
-    const primaryColor: [number, number, number] = [59, 130, 246] // Blue
-    const headerBg: [number, number, number] = [241, 245, 249] // Light gray
-
-    // Title
-    doc.setFontSize(20)
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
-    doc.text('Academic Performance Report', 105, 20, { align: 'center' })
-
-    // Student Info Section
-    doc.setFontSize(12)
-    doc.setTextColor(0, 0, 0)
-    let yPos = 35
-
-    doc.setFont('helvetica', 'bold')
-    doc.text('Student Information', 14, yPos)
-    yPos += 7
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.text(`Index Number: ${student.indexNumber}`, 14, yPos)
-    yPos += 5
-
-    if (student.name && student.name !== "Top Links") {
-        doc.text(`Name: ${student.name}`, 14, yPos)
-        yPos += 5
+    // Professional color palette
+    const colors = {
+        primary: [37, 99, 235] as [number, number, number],
+        secondary: [99, 102, 241] as [number, number, number],
+        success: [34, 197, 94] as [number, number, number],
+        warning: [245, 158, 11] as [number, number, number],
+        danger: [239, 68, 68] as [number, number, number],
+        dark: [30, 41, 59] as [number, number, number],
+        light: [248, 250, 252] as [number, number, number],
+        gray: [100, 116, 139] as [number, number, number],
+        border: [203, 213, 225] as [number, number, number],
     }
 
-    doc.text(`CGPA: ${student.cgpa.toFixed(4)}`, 14, yPos)
-    yPos += 5
-    doc.text(`Total Credits: ${student.totalCredits}`, 14, yPos)
-    yPos += 5
-    doc.text(`Total Modules: ${student.modules.length}`, 14, yPos)
-    yPos += 10
+    let yPos = 20
 
-    // Performance Summary
+    // ==================== HEADER ====================
+    doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2])
+    doc.rect(0, 0, 210, 40, 'F')
+
+    doc.setFontSize(22)
+    doc.setTextColor(255, 255, 255)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(12)
-    doc.text('Performance Summary', 14, yPos)
-    yPos += 7
+    doc.text('Academic Performance Report', 105, 18, { align: 'center' })
 
-    // Grade distribution
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Generated on ${new Date().toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    })}`, 105, 26, { align: 'center' })
+
+    doc.setDrawColor(colors.secondary[0], colors.secondary[1], colors.secondary[2])
+    doc.setLineWidth(1.5)
+    doc.line(14, 34, 196, 34)
+
+    yPos = 48
+
+    // ==================== STUDENT PROFILE SECTION ====================
+    const hasPhoto = student.photoUrl && student.photoUrl !== ""
+
+    // Draw profile card background
+    doc.setFillColor(colors.light[0], colors.light[1], colors.light[2])
+    doc.roundedRect(14, yPos, 182, 48, 3, 3, 'F')
+    doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+    doc.setLineWidth(0.5)
+    doc.roundedRect(14, yPos, 182, 48, 3, 3, 'S')
+
+    const cardStartY = yPos
+    let contentX = 20
+
+    // Profile photo
+    if (hasPhoto) {
+        try {
+            const photoSize = 40
+            const photoX = 20
+            const photoY = cardStartY + 4
+            doc.addImage(student.photoUrl!, 'JPEG', photoX, photoY, photoSize, photoSize)
+            doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+            doc.setLineWidth(0.8)
+            doc.rect(photoX, photoY, photoSize, photoSize, 'S')
+            contentX = 68
+        } catch (error) {
+            console.error('Error adding photo:', error)
+        }
+    }
+
+    // Student info - left side
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2])
+    const nameY = cardStartY + 12
+
+    if (student.name && student.name !== "Top Links") {
+        doc.text(student.name, contentX, nameY)
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(colors.gray[0], colors.gray[1], colors.gray[2])
+        doc.text(`Index: ${student.indexNumber}`, contentX, nameY + 6)
+    } else {
+        doc.text(student.indexNumber, contentX, nameY)
+    }
+
+    // Additional info below name
+    doc.setFontSize(8)
+    doc.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2])
+    const infoY = nameY + 14
+    doc.text(`Credits: ${student.totalCredits}/135`, contentX, infoY)
+    doc.text(`•`, contentX + 32, infoY)
+    doc.text(`Modules: ${student.modules.length}`, contentX + 36, infoY)
+    doc.text(`•`, contentX + 62, infoY)
+
+    const predictedClass = student.cgpa >= 3.7 ? 'First Class' :
+        student.cgpa >= 3.0 ? 'Second Upper' :
+            student.cgpa >= 2.0 ? 'Second Lower' : 'Pass'
+    doc.text(`Class: ${predictedClass}`, contentX + 66, infoY)
+
+    // CGPA - top right
+    const cgpaColor = student.cgpa >= 3.7 ? colors.success :
+        student.cgpa >= 3.0 ? colors.primary :
+            student.cgpa >= 2.0 ? colors.warning : colors.danger
+
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(colors.gray[0], colors.gray[1], colors.gray[2])
+    doc.text('CGPA', 145, cardStartY + 10, { align: 'center' })
+
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(cgpaColor[0], cgpaColor[1], cgpaColor[2])
+    doc.text(student.cgpa.toFixed(4), 145, cardStartY + 22, { align: 'center' })
+
+    // Rank - top right
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(colors.gray[0], colors.gray[1], colors.gray[2])
+    doc.text('Rank', 178, cardStartY + 10, { align: 'center' })
+
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2])
+    doc.text(`#${student.rank}`, 178, cardStartY + 22, { align: 'center' })
+
+    yPos = cardStartY + 56
+
+    // ==================== GRADE DISTRIBUTION ====================
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2])
+    doc.text('Performance Summary', 14, yPos)
+    yPos += 8
+
     const gradeDistribution = student.modules.reduce((acc, module) => {
         acc[module.grade] = (acc[module.grade] || 0) + 1
         return acc
     }, {} as Record<string, number>)
 
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    const grades = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'E']
-    let gradeText = 'Grade Distribution: '
-    grades.forEach(grade => {
-        if (gradeDistribution[grade]) {
-            gradeText += `${grade}: ${gradeDistribution[grade]}  `
+    const gradeColors: Record<string, [number, number, number]> = {
+        'A+': colors.success, 'A': colors.success, 'A-': colors.success,
+        'B+': colors.primary, 'B': colors.primary, 'B-': colors.primary,
+        'C+': colors.warning, 'C': colors.warning, 'C-': colors.warning,
+        'D+': colors.danger, 'D': colors.danger, 'E': colors.danger
+    }
+
+    // Draw grade distribution in a compact table format
+    const gradeOrder = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'E']
+    const gradesToShow = gradeOrder.filter(g => gradeDistribution[g])
+
+    doc.setFontSize(9)
+    let gradeX = 14
+    let gradeY = yPos
+
+    gradesToShow.forEach((grade, index) => {
+        const count = gradeDistribution[grade]
+        const color = gradeColors[grade] || colors.gray
+
+        // Grade badge
+        doc.setFillColor(color[0], color[1], color[2])
+        doc.roundedRect(gradeX, gradeY - 4, 12, 6, 1, 1, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFont('helvetica', 'bold')
+        doc.text(grade, gradeX + 6, gradeY, { align: 'center' })
+
+        // Count
+        doc.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2])
+        doc.setFont('helvetica', 'normal')
+        doc.text(`(${count})`, gradeX + 14, gradeY)
+
+        gradeX += 30
+        if ((index + 1) % 6 === 0) {
+            gradeX = 14
+            gradeY += 8
         }
     })
 
-    const splitGradeText = doc.splitTextToSize(gradeText, 180)
-    doc.text(splitGradeText, 14, yPos)
-    yPos += splitGradeText.length * 5 + 5
+    yPos = gradeY + 10
 
-    // Semester-wise Performance Table
-    doc.setFont('helvetica', 'bold')
+    // ==================== SEMESTER PERFORMANCE TABLE ====================
     doc.setFontSize(12)
-    doc.text('Semester-wise Performance', 14, yPos)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2])
+    doc.text('Semester Performance', 14, yPos)
     yPos += 5
 
     const semesterTableData = student.semesters.map(sem => [
         sem.year,
-        sem.semester,
+        `Semester ${sem.semester}`,
         sem.sgpa.toFixed(4),
         sem.credits.toString(),
         sem.modules.length.toString()
@@ -110,50 +227,84 @@ export function generateStudentPDF(student: StudentDetails) {
         startY: yPos,
         head: [['Year', 'Semester', 'SGPA', 'Credits', 'Modules']],
         body: semesterTableData,
-        theme: 'grid',
+        theme: 'striped',
         headStyles: {
-            fillColor: primaryColor,
+            fillColor: colors.primary,
             textColor: [255, 255, 255],
-            fontStyle: 'bold'
+            fontStyle: 'bold',
+            fontSize: 9,
+            halign: 'center',
+            cellPadding: 3
         },
-        styles: { fontSize: 9 },
+        alternateRowStyles: {
+            fillColor: colors.light
+        },
+        styles: {
+            fontSize: 8,
+            halign: 'center',
+            cellPadding: 2.5
+        },
+        columnStyles: {
+            0: { cellWidth: 35 },
+            1: { cellWidth: 45 },
+            2: { fontStyle: 'bold', cellWidth: 35 },
+            3: { cellWidth: 35 },
+            4: { cellWidth: 32 }
+        },
         margin: { left: 14, right: 14 }
     })
 
-    // Get the Y position after the table
-    yPos = (doc as any).lastAutoTable.finalY + 10
-
-    // Module Details - New Page
+    // ==================== MODULE DETAILS - NEW PAGE ====================
     doc.addPage()
-    yPos = 20
 
+    // Header on new page
+    doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2])
+    doc.rect(0, 0, 210, 28, 'F')
+    doc.setFontSize(16)
+    doc.setTextColor(255, 255, 255)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(14)
-    doc.text('Detailed Module Grades', 14, yPos)
-    yPos += 10
+    doc.text('Detailed Module Grades', 105, 16, { align: 'center' })
+
+    yPos = 38
 
     // Group modules by semester
     const modulesBySemester: Record<string, ModuleGrade[]> = {}
     student.modules.forEach(module => {
-        const key = `${module.year} - Semester ${module.semester}`
+        const key = `${module.year}|${module.semester}`
         if (!modulesBySemester[key]) {
             modulesBySemester[key] = []
         }
         modulesBySemester[key].push(module)
     })
 
+    const sortedSemesterKeys = Object.keys(modulesBySemester).sort()
+
     // Print modules by semester
-    Object.entries(modulesBySemester).forEach(([semesterKey, modules]) => {
-        // Check if we need a new page
-        if (yPos > 250) {
+    sortedSemesterKeys.forEach((key) => {
+        const [year, semester] = key.split('|')
+        const modules = modulesBySemester[key]
+
+        if (yPos > 245) {
             doc.addPage()
             yPos = 20
         }
 
-        doc.setFont('helvetica', 'bold')
+        // Semester header
+        doc.setFillColor(colors.light[0], colors.light[1], colors.light[2])
+        doc.roundedRect(14, yPos - 3, 182, 9, 2, 2, 'F')
+
         doc.setFontSize(11)
-        doc.text(semesterKey, 14, yPos)
-        yPos += 5
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2])
+        doc.text(`${year} - Semester ${semester}`, 18, yPos + 2)
+
+        const semGPA = student.semesters.find(s => s.year === year && s.semester === semester)?.sgpa || 0
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(colors.gray[0], colors.gray[1], colors.gray[2])
+        doc.text(`SGPA: ${semGPA.toFixed(4)}`, 170, yPos + 2)
+
+        yPos += 8
 
         const moduleTableData = modules.map(mod => [
             mod.moduleCode,
@@ -166,43 +317,62 @@ export function generateStudentPDF(student: StudentDetails) {
             startY: yPos,
             head: [['Code', 'Module Name', 'Credits', 'Grade']],
             body: moduleTableData,
-            theme: 'striped',
+            theme: 'plain',
             headStyles: {
-                fillColor: headerBg,
-                textColor: [0, 0, 0],
-                fontStyle: 'bold'
+                fillColor: colors.dark,
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 8,
+                cellPadding: 2
             },
-            styles: { fontSize: 9 },
-            margin: { left: 14, right: 14 },
+            styles: {
+                fontSize: 8,
+                cellPadding: 2
+            },
             columnStyles: {
-                0: { cellWidth: 25 },
-                1: { cellWidth: 100 },
-                2: { cellWidth: 20 },
-                3: { cellWidth: 20 }
+                0: { cellWidth: 26, fontStyle: 'bold' },
+                1: { cellWidth: 112 },
+                2: { cellWidth: 18, halign: 'center' },
+                3: {
+                    cellWidth: 18,
+                    halign: 'center',
+                    fontStyle: 'bold'
+                }
+            },
+            margin: { left: 14, right: 14 },
+            didParseCell: function (data) {
+                if (data.column.index === 3 && data.section === 'body') {
+                    const grade = data.cell.raw as string
+                    const color = gradeColors[grade] || colors.gray
+                    data.cell.styles.textColor = color
+                }
             }
         })
 
         yPos = (doc as any).lastAutoTable.finalY + 8
     })
 
-    // Footer on last page
+    // ==================== FOOTER ON ALL PAGES ====================
     const pageCount = doc.getNumberOfPages()
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i)
-        doc.setFontSize(8)
-        doc.setTextColor(128, 128, 128)
-        doc.text(
-            `Generated on ${new Date().toLocaleDateString()} | Page ${i} of ${pageCount}`,
-            105,
-            285,
-            { align: 'center' }
-        )
+
+        doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+        doc.setLineWidth(0.3)
+        doc.line(14, 282, 196, 282)
+
+        doc.setFontSize(7)
+        doc.setTextColor(colors.gray[0], colors.gray[1], colors.gray[2])
+        doc.setFont('helvetica', 'normal')
+        doc.text('Academic Performance Report', 14, 286)
+        doc.text(`Page ${i} of ${pageCount}`, 105, 286, { align: 'center' })
+        doc.text(student.indexNumber, 196, 286, { align: 'right' })
     }
 
     // Save the PDF
     const fileName = student.name && student.name !== "Top Links"
-        ? `${student.name.replace(/\s+/g, '_')}_${student.indexNumber}_Report.pdf`
-        : `${student.indexNumber}_Report.pdf`
+        ? `${student.name.replace(/\s+/g, '_')}_Academic_Report.pdf`
+        : `${student.indexNumber}_Academic_Report.pdf`
 
     doc.save(fileName)
 }
